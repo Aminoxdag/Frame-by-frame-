@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Frame Viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #181818;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+    }
+
+    #controls {
+      margin-bottom: 25px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 90%;
+      max-width: 600px;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background-color: #333;
+      color: #eee;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-sizing: border-box; /* Important for width and padding */
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      min-width: 200px;
+    }
+
+    input[type="file"]::file-selector-button {
+      background-color: #555;
+      color: #eee;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    input[type="file"]::file-selector-button:hover,
+    button:hover {
+      background-color: #5e5e5e;
+    }
+
+    #videoContainer {
+      width: 95%;
+      max-width: 900px;
+      background-color: #000;
+      border-radius: 8px;
+      overflow: hidden; /* To contain video within rounded corners */
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      margin-bottom: 20px;
+    }
+
+    video {
+      display: block; /* Prevent extra space below the video */
+      width: 100%;
+      height: auto;
+      max-height: 75vh;
+      object-fit: contain;
+    }
+
+    #frame-controls {
+      margin-top: 20px;
+      display: none;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 90%;
+      max-width: 500px;
+    }
+
+    #frame-controls button {
+      padding: 10px 20px;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    /* Fullscreen Styles */
+    #videoContainer:fullscreen,
+    #videoContainer:-webkit-full-screen {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 0;
+    }
+
+    #videoContainer:fullscreen video,
+    #videoContainer:-webkit-full-screen video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      #controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      input[type="text"],
+      input[type="file"],
+      button {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      #frame-controls {
+        width: 100%;
+      }
+
+      #frame-controls button {
+        width: calc(50% - 5px); /* Two buttons per row with some spacing */
+        margin-bottom: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #frame-controls button {
+        width: 100%; /* One button per row on smaller screens */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="controls">
+    <input type="text" id="videoUrl" placeholder="Enter video URL" />
+    <button onclick="loadVideoFromUrl()">Load URL</button>
+    <input type="file" id="videoUpload" accept="video/*">
+    <button onclick="loadVideoFromFile()">Load File</button>
+    <button onclick="toggleFrameMode()">Frame Mode</button>
+  </div>
+
+  <div id="videoContainer">
+    <video id="video" controls>
+      Your browser does not support the video tag.
+    </video>
+  </div>
+
+  <div id="frame-controls">
+    <button onclick="stepFrame(-1)">◀ Prev Frame</button>
+    <button onclick="stepFrame(1)">Next Frame ▶</button>
+    <button onclick="saveCurrentFrame()">Save Frame</button>
+    <button onclick="toggleFullscreen()">Fullscreen ↔</button>
+  </div>
+
+  <canvas id="frameCanvas"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const frameControls = document.getElementById('frame-controls');
+    const videoContainer = document.getElementById('videoContainer');
+    const videoUpload = document.getElementById('videoUpload');
+    let frameMode = false;
+
+    function loadVideoFromUrl() {
+      const url = document.getElementById('videoUrl').value;
+      if (url) {
+        video.src = url;
+        video.load();
+        video.controls = true;
+        frameControls.style.display = "none";
+        frameMode = false;
+        exitFullscreen();
+      }
+    }
+
+    function loadVideoFromFile() {
+      const file = videoUpload.files[0];
+      if (file) {
+        const fileURL = URL.createObjectURL(file);
+        video.src = fileURL;
+        video.load();
+        video.controls = true;
+        frameControls.style.display = "none";
+        frameMode = false;
+        exitFullscreen();
+
+        video.addEventListener('unload', () => {
+          URL.revokeObjectURL(fileURL);
+        }, { once: true });
+      }
+    }
+
+    async function toggleFrameMode() {
+      frameMode = !frameMode;
+
+      if (frameMode) {
+        video.pause();
+        video.controls = false;
+        frameControls.style.display = "flex";
+      } else {
+        exitFullscreen();
+        video.controls = true;
+        frameControls.style.display = "none";
+      }
+    }
+
+    function stepFrame(direction) {
+      if (!video.paused) video.pause();
+      const fps = 30;
+      video.currentTime += direction * (1 / fps);
+    }
+
+    function saveCurrentFrame() {
+      const canvas = document.getElementById('frameCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL("image/png");
+
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `frame_${Math.floor(video.currentTime * 1000)}ms.png`;
+      link.click();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        enterFullscreen(videoContainer);
+      } else {
+        exitFullscreen();
+      }
+    }
+
+    function enterFullscreen(element) {
+      if (element.requestFullscreen) {
+        return element.requestFullscreen();
+      } else if (element.webkitRequestFullscreen) {
+        return element.webkitRequestFullscreen();
+      } else if (element.msRequestFullscreen) {
+        return element.msRequestFullscreen();
+      }
+    }
+
+    function exitFullscreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+  </script>
+
+</body>
+</html>
