@@ -1,273 +1,459 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video Frame Viewer</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #181818;
-      color: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      margin: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Video Frame Studio</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f0f;
+            color: #e5e5e5;
+            /* Prevent pull-to-refresh on mobile */
+            overscroll-behavior-y: contain;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        
+        /* Range Input Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #333;
+            border-radius: 2px;
+        }
+        
+        #fileInput { display: none; }
 
-    #controls {
-      margin-bottom: 25px;
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-      justify-content: center;
-      width: 90%;
-      max-width: 600px;
-    }
+        /* Touch-friendly button sizes */
+        .icon-btn {
+            @apply p-3 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors duration-200 flex items-center justify-center;
+            min-width: 44px; /* Apple Human Interface Guidelines min size */
+            min-height: 44px;
+        }
 
-    input[type="text"],
-    input[type="file"],
-    button {
-      padding: 10px 15px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      background-color: #333;
-      color: #eee;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      box-sizing: border-box; /* Important for width and padding */
-    }
-
-    input[type="text"] {
-      flex-grow: 1;
-      min-width: 200px;
-    }
-
-    input[type="file"]::file-selector-button {
-      background-color: #555;
-      color: #eee;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 12px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    input[type="file"]::file-selector-button:hover,
-    button:hover {
-      background-color: #5e5e5e;
-    }
-
-    #videoContainer {
-      width: 95%;
-      max-width: 900px;
-      background-color: #000;
-      border-radius: 8px;
-      overflow: hidden; /* To contain video within rounded corners */
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-      margin-bottom: 20px;
-    }
-
-    video {
-      display: block; /* Prevent extra space below the video */
-      width: 100%;
-      height: auto;
-      max-height: 75vh;
-      object-fit: contain;
-    }
-
-    #frame-controls {
-      margin-top: 20px;
-      display: none;
-      gap: 15px;
-      justify-content: center;
-      flex-wrap: wrap;
-      width: 90%;
-      max-width: 500px;
-    }
-
-    #frame-controls button {
-      padding: 10px 20px;
-    }
-
-    canvas {
-      display: none;
-    }
-
-    /* Fullscreen Styles */
-    #videoContainer:fullscreen,
-    #videoContainer:-webkit-full-screen {
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 0;
-    }
-
-    #videoContainer:fullscreen video,
-    #videoContainer:-webkit-full-screen video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      #controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      input[type="text"],
-      input[type="file"],
-      button {
-        width: 100%;
-        margin-bottom: 10px;
-      }
-
-      #frame-controls {
-        width: 100%;
-      }
-
-      #frame-controls button {
-        width: calc(50% - 5px); /* Two buttons per row with some spacing */
-        margin-bottom: 10px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      #frame-controls button {
-        width: 100%; /* One button per row on smaller screens */
-      }
-    }
-  </style>
+        /* Tooltip hidden on mobile to prevent obstruction */
+        .tooltip {
+            @apply hidden md:block absolute -top-10 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs py-1 px-2 rounded opacity-0 pointer-events-none transition-opacity duration-200 whitespace-nowrap;
+        }
+        .group:hover .tooltip {
+            @apply opacity-100;
+        }
+    </style>
 </head>
-<body>
+<body class="h-screen flex flex-col overflow-hidden bg-black">
 
-  <div id="controls">
-    <input type="text" id="videoUrl" placeholder="Enter video URL" />
-    <button onclick="loadVideoFromUrl()">Load URL</button>
-    <input type="file" id="videoUpload" accept="video/*">
-    <button onclick="loadVideoFromFile()">Load File</button>
-    <button onclick="toggleFrameMode()">Frame Mode</button>
-  </div>
+    <!-- Mobile-Optimized Header -->
+    <header class="border-b border-gray-800 bg-[#121212] flex flex-col md:flex-row md:items-center justify-between p-3 shrink-0 z-20 gap-3">
+        
+        <!-- Top Row: Logo & File Button -->
+        <div class="flex items-center justify-between w-full md:w-auto">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <h1 class="text-lg font-semibold tracking-wide text-white">Frame Studio</h1>
+            </div>
+            
+            <button onclick="document.getElementById('fileInput').click()" class="md:hidden bg-gray-800 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload
+            </button>
+        </div>
+        
+        <!-- Controls Row (Desktop & Mobile expanded) -->
+        <div class="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+            <!-- URL Input (Now visible on Mobile) -->
+            <div class="flex flex-1 bg-[#1a1a1a] border border-gray-700 rounded-lg overflow-hidden focus-within:border-blue-500 transition-colors">
+                <input type="text" id="urlInputHeader" placeholder="Paste URL..." class="bg-transparent border-none outline-none text-sm px-3 py-2 w-full text-gray-300 placeholder-gray-500 min-w-[100px]">
+                <button onclick="loadFromUrl('urlInputHeader')" class="bg-gray-800 active:bg-gray-700 text-gray-300 px-3 py-2 border-l border-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </div>
 
-  <div id="videoContainer">
-    <video id="video" controls>
-      Your browser does not support the video tag.
-    </video>
-  </div>
+            <!-- Upload Button (Desktop) -->
+            <button onclick="document.getElementById('fileInput').click()" class="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors items-center gap-2 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload File
+            </button>
+            <input type="file" id="fileInput" accept="video/*" onchange="loadFromFile(this.files[0])">
+        </div>
+    </header>
 
-  <div id="frame-controls">
-    <button onclick="stepFrame(-1)">◀ Prev Frame</button>
-    <button onclick="stepFrame(1)">Next Frame ▶</button>
-    <button onclick="saveCurrentFrame()">Save Frame</button>
-    <button onclick="toggleFullscreen()">Fullscreen ↔</button>
-  </div>
+    <!-- Main Workspace -->
+    <main class="flex-1 relative flex flex-col items-center justify-center bg-[#050505] overflow-hidden w-full" id="dropZone">
+        
+        <!-- Drop Zone Overlay -->
+        <div id="dragOverlay" class="absolute inset-0 bg-blue-500/20 border-4 border-dashed border-blue-500 z-50 hidden flex flex-col items-center justify-center backdrop-blur-sm">
+            <p class="text-2xl font-bold text-white">Drop video here</p>
+        </div>
 
-  <canvas id="frameCanvas"></canvas>
+        <!-- Placeholder State (Improved for Mobile) -->
+        <div id="placeholder" class="text-center p-4 max-w-md w-full flex flex-col items-center">
+            <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-6 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+            </div>
+            
+            <h2 class="text-xl md:text-2xl font-bold text-white mb-2">Load Video</h2>
+            <p class="text-gray-400 mb-6 text-sm md:text-base">Upload a file or paste a link below</p>
+            
+            <div class="w-full flex flex-col gap-3">
+                <!-- Large Mobile URL Bar -->
+                <div class="flex bg-[#1a1a1a] border border-gray-700 rounded-lg overflow-hidden focus-within:border-blue-500 transition-colors w-full shadow-lg">
+                    <input type="text" id="urlInputMain" placeholder="Paste video URL here..." class="bg-transparent border-none outline-none text-base px-4 py-3 w-full text-gray-300 placeholder-gray-500">
+                    <button onclick="loadFromUrl('urlInputMain')" class="bg-blue-600 active:bg-blue-700 text-white px-4 font-medium transition-colors">
+                        Load
+                    </button>
+                </div>
 
-  <script>
-    const video = document.getElementById('video');
-    const frameControls = document.getElementById('frame-controls');
-    const videoContainer = document.getElementById('videoContainer');
-    const videoUpload = document.getElementById('videoUpload');
-    let frameMode = false;
+                <div class="relative w-full text-center border-t border-gray-800 my-2">
+                    <span class="bg-[#050505] px-2 text-xs text-gray-500 relative -top-2.5">OR</span>
+                </div>
 
-    function loadVideoFromUrl() {
-      const url = document.getElementById('videoUrl').value;
-      if (url) {
-        video.src = url;
-        video.load();
-        video.controls = true;
-        frameControls.style.display = "none";
-        frameMode = false;
-        exitFullscreen();
-      }
-    }
+                <button onclick="document.getElementById('fileInput').click()" class="bg-gray-800 active:bg-gray-700 text-white py-3 px-6 rounded-lg transition-all w-full border border-gray-700 font-medium">
+                    Select Local File
+                </button>
+            </div>
+        </div>
 
-    function loadVideoFromFile() {
-      const file = videoUpload.files[0];
-      if (file) {
-        const fileURL = URL.createObjectURL(file);
-        video.src = fileURL;
-        video.load();
-        video.controls = true;
-        frameControls.style.display = "none";
-        frameMode = false;
-        exitFullscreen();
+        <!-- Video Stage -->
+        <div id="videoStage" class="hidden relative w-full h-full flex flex-col">
+            <!-- Video Container -->
+            <div class="flex-1 flex items-center justify-center bg-black relative overflow-hidden group">
+                <video id="videoElement" class="w-full h-full object-contain" crossorigin="anonymous" playsinline></video>
+                
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" class="hidden absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            </div>
 
-        video.addEventListener('unload', () => {
-          URL.revokeObjectURL(fileURL);
-        }, { once: true });
-      }
-    }
+            <!-- Mobile Optimized Controls Bar -->
+            <div class="bg-[#121212] border-t border-gray-800 pb-safe pt-2 px-3 shrink-0 select-none pb-6 md:pb-4">
+                
+                <!-- Timeline -->
+                <div class="w-full mb-3 flex items-center gap-3">
+                    <span id="currentTime" class="text-[10px] md:text-xs text-gray-400 font-mono w-8 md:w-12 text-right">0:00</span>
+                    <div class="relative flex-1 h-8 flex items-center group/scrubber">
+                        <input type="range" id="progressBar" min="0" max="100" value="0" step="0.01" class="w-full z-10 opacity-0 absolute h-full cursor-pointer">
+                        <div class="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden pointer-events-none">
+                            <div id="progressFill" class="h-full bg-blue-500 w-0"></div>
+                        </div>
+                    </div>
+                    <span id="duration" class="text-[10px] md:text-xs text-gray-400 font-mono w-8 md:w-12">0:00</span>
+                </div>
 
-    async function toggleFrameMode() {
-      frameMode = !frameMode;
+                <!-- Main Buttons Row -->
+                <div class="flex flex-wrap items-center justify-between gap-y-3">
+                    
+                    <!-- Left: Play & Navigation -->
+                    <div class="flex items-center gap-1 md:gap-4 order-1">
+                        <button id="playBtn" onclick="togglePlay()" class="icon-btn text-white bg-gray-800 active:bg-gray-700 w-12 h-12">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
 
-      if (frameMode) {
-        video.pause();
-        video.controls = false;
-        frameControls.style.display = "flex";
-      } else {
-        exitFullscreen();
-        video.controls = true;
-        frameControls.style.display = "none";
-      }
-    }
+                        <div class="h-8 w-px bg-gray-800 mx-1"></div>
 
-    function stepFrame(direction) {
-      if (!video.paused) video.pause();
-      const fps = 30;
-      video.currentTime += direction * (1 / fps);
-    }
+                        <div class="flex items-center gap-1">
+                            <button onclick="stepFrame(-1)" class="icon-btn text-gray-300 active:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                                </svg>
+                            </button>
+                            <button onclick="stepFrame(1)" class="icon-btn text-gray-300 active:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
-    function saveCurrentFrame() {
-      const canvas = document.getElementById('frameCanvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const image = canvas.toDataURL("image/png");
+                    <!-- Right: Save & Fullscreen (Wrapped on very small screens if needed) -->
+                    <div class="flex items-center gap-2 order-2">
+                        <button onclick="saveFrame()" class="bg-white active:bg-gray-200 text-black px-4 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>Save</span>
+                        </button>
 
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `frame_${Math.floor(video.currentTime * 1000)}ms.png`;
-      link.click();
-    }
+                        <button onclick="toggleFullscreen()" class="icon-btn text-gray-300 active:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                        </button>
+                    </div>
 
-    function toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        enterFullscreen(videoContainer);
-      } else {
-        exitFullscreen();
-      }
-    }
+                </div>
+            </div>
+        </div>
+    </main>
 
-    function enterFullscreen(element) {
-      if (element.requestFullscreen) {
-        return element.requestFullscreen();
-      } else if (element.webkitRequestFullscreen) {
-        return element.webkitRequestFullscreen();
-      } else if (element.msRequestFullscreen) {
-        return element.msRequestFullscreen();
-      }
-    }
+    <!-- Hidden Canvas -->
+    <canvas id="canvas" class="hidden"></canvas>
 
-    function exitFullscreen() {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
-      }
-    }
-  </script>
+    <!-- Toast -->
+    <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur border border-gray-700 text-white px-5 py-3 rounded-full shadow-2xl transition-all duration-300 -translate-y-40 opacity-0 z-50 flex items-center gap-3 min-w-[200px] justify-center">
+        <div id="toastIcon"></div>
+        <span id="toastMessage" class="font-medium text-sm">Notification</span>
+    </div>
 
+    <script>
+        const video = document.getElementById('videoElement');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const canvas = document.getElementById('canvas');
+        const placeholder = document.getElementById('placeholder');
+        const videoStage = document.getElementById('videoStage');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const dropZone = document.getElementById('dropZone');
+        const dragOverlay = document.getElementById('dragOverlay');
+        const playBtnIcon = document.querySelector('#playBtn svg path');
+        
+        let isDragActive = false;
+        const FPS = 30; 
+        let toastTimeout;
+
+        function showVideoUI() {
+            placeholder.style.display = 'none';
+            videoStage.style.display = 'flex';
+        }
+
+        function loadFromUrl(inputId) {
+            const url = document.getElementById(inputId).value.trim();
+            if (!url) return;
+            
+            showLoading(true);
+            video.crossOrigin = "anonymous";
+            video.src = url;
+            showVideoUI();
+        }
+
+        function loadFromFile(file) {
+            if (!file) return;
+            
+            showLoading(true);
+            const fileURL = URL.createObjectURL(file);
+            
+            if (video.src && video.src.startsWith('blob:')) {
+                URL.revokeObjectURL(video.src);
+            }
+            
+            video.removeAttribute('crossorigin');
+            video.src = fileURL;
+            showVideoUI();
+        }
+
+        video.addEventListener('loadeddata', () => {
+            showLoading(false);
+            updateDuration();
+            showToast("Loaded successfully", "success");
+        });
+
+        video.addEventListener('error', (e) => {
+            showLoading(false);
+            showToast("Error loading video", "error");
+        });
+
+        video.addEventListener('timeupdate', () => {
+            const percent = (video.currentTime / video.duration) * 100;
+            progressBar.value = percent;
+            progressFill.style.width = `${percent}%`;
+            document.getElementById('currentTime').innerText = formatTime(video.currentTime);
+        });
+
+        video.addEventListener('play', updatePlayBtn);
+        video.addEventListener('pause', updatePlayBtn);
+
+        function togglePlay() {
+            if (video.paused) video.play();
+            else video.pause();
+        }
+
+        function updatePlayBtn() {
+            if (video.paused) {
+                playBtnIcon.setAttribute('d', 'M8 5v14l11-7z'); 
+            } else {
+                playBtnIcon.setAttribute('d', 'M6 4h4v16H6V4zm8 0h4v16h-4V4z');
+            }
+        }
+
+        function stepFrame(direction) {
+            if (!video.paused) video.pause();
+            video.currentTime += direction * (1 / FPS);
+        }
+
+        progressBar.addEventListener('input', (e) => {
+            const time = (e.target.value / 100) * video.duration;
+            video.currentTime = time;
+        });
+
+        function saveFrame() {
+            if (!video.videoWidth) {
+                showToast("No video loaded!", "error");
+                return;
+            }
+
+            try {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                link.download = `frame-${timestamp}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast("Frame saved!", "success");
+
+            } catch (err) {
+                if (err.name === 'SecurityError') {
+                    showToast("CORS blocked download", "error");
+                    alert("Security limitation: Remote videos cannot be saved directly by browsers. Please download the video file first and upload it.");
+                } else {
+                    showToast("Save failed", "error");
+                }
+            }
+        }
+
+        // --- Drag & Drop ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault(); e.stopPropagation();
+            }, false);
+        });
+
+        dropZone.addEventListener('dragenter', () => {
+            isDragActive = true;
+            dragOverlay.classList.remove('hidden');
+        });
+
+        dragOverlay.addEventListener('dragleave', (e) => {
+            isDragActive = false;
+            dragOverlay.classList.add('hidden');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            isDragActive = false;
+            dragOverlay.classList.add('hidden');
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0 && files[0].type.startsWith('video/')) {
+                loadFromFile(files[0]);
+            }
+        });
+
+        // --- Paste Support ---
+        document.addEventListener('paste', (event) => {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('video/')) {
+                    loadFromFile(item.getAsFile());
+                    showToast("Video pasted!", "success");
+                    return;
+                }
+            }
+            const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+            if (pastedText && (pastedText.startsWith('http') || pastedText.startsWith('blob:'))) {
+                const inputs = document.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => input.value = pastedText);
+                loadFromUrl('urlInputMain'); 
+                showToast("Link pasted!", "success");
+            }
+        });
+
+        // --- Utilities ---
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        function updateDuration() {
+            document.getElementById('duration').innerText = formatTime(video.duration);
+        }
+
+        function showLoading(show) {
+            loadingSpinner.style.display = show ? 'flex' : 'none';
+        }
+
+        function toggleFullscreen() {
+            const container = videoStage.querySelector('div');
+            if (!document.fullscreenElement) {
+                if (container.requestFullscreen) container.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        function showToast(msg, type = 'neutral') {
+            const toast = document.getElementById('toast');
+            const messageEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+            
+            messageEl.innerText = msg;
+            
+            if (type === 'success') {
+                iconEl.innerHTML = `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            } else if (type === 'error') {
+                iconEl.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else {
+                iconEl.innerHTML = '';
+            }
+
+            toast.classList.remove('-translate-y-40', 'opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('-translate-y-40', 'opacity-0');
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
